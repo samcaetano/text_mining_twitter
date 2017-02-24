@@ -120,64 +120,6 @@ def CutFile(quartile1, quartile3, data, df, label):
     df.to_csv('%s/%s_sliced.csv'\
         % (label, label))
     
-"""def cut_file(seguradoraId, num_min, num_max):
-    x_axis, z_axis, y_axis = [], [], []
-    
-    with open(str(seguradoraId)+'.txt', 'r') as arq:
-        
-        # tokens
-        x_axis =  arq.readline().split(';')
-        offset = arq.tell()
-        
-        # gets the scores
-        z_axis = [line.split(';')[1:] for line in arq]
-        arq.seek(offset) # rewind arq to second line
-        
-        # gets the tweetId
-        y_axis = [line.split(';')[:1] for line in arq]
-        x_axis.pop()
-        arq.close()
-
-        [l.pop() for l in z_axis] # remove '\n's
-
-
-    adder = 0
-    for i in range(len(x_axis)):
-        adder = 0
-        adder = sum(1 for j in range(len(y_axis))
-                    if float(z_axis[j][i]) != 0.)
-        if adder < num_min or adder > num_max:
-            x_axis[i] = '$'
-            for j in range(len(y_axis)):
-                z_axis[j][i] = -1
-        
-            
-    # ignorar '$' em x_axis
-    # result no lugar de z_axis
-    print z_axis
-    
-    
-    with open('_'+str(seguradoraId)+'.txt', 'w') as _arq:
-        for token in x_axis:
-            if token != '$':
-                _arq.write(token+";")
-        _arq.write("\n")
-        
-        aux2 = sum(1 for elem in x_axis if elem != '$')
-        
-        for index, tweetId in enumerate(y_axis):
-            aux1 = sum(1 for lst in z_axis[index] if float(lst) > 0.)
-            if aux1 > 0:
-                _arq.write(tweetId[0]+";")
-                for score in z_axis[index]:
-                    #if aux1 == aux2:
-                    if(score != -1):
-                        _arq.write(str(score)+";")
-                _arq.write("\n")
-            aux1 = 0
-        _arq.close()
-"""        
-            
 seguradoraIduradoras = dbm.GetAllSeguradoras()
 
 for seguradoraId in seguradoraIduradoras:
