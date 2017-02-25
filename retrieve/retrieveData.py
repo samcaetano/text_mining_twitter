@@ -109,7 +109,7 @@ def get_user(arg):
             print m
             logging.info(m)
 
-# Procura pela conta de um usuario passado por parametro
+# Searches for the account of the user passed by parameter
 def search_user(arg):
     try:
         return OAuth.twitter_api.users.search(q=arg)
