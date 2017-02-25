@@ -38,7 +38,6 @@ def get_followers_current_user(arg, count):
     
     # Go through the search
     while followers_ids['next_cursor'] != 0:
-    
         # >next_cursor< indicates the next followers' page id
         try:
             kwargs.update({'user_id':arg})
@@ -247,6 +246,7 @@ def insertFollowerFromFile(id_seguradora, followers, followers_count,\
                                 
                             print m
                             logging.info(m)
+                            
                         else:
                             followers_noTweets = followers_noTweets + 1
                             followers_count -= 1
@@ -265,7 +265,6 @@ def insertFollowerFromFile(id_seguradora, followers, followers_count,\
                         # Check if returned content is NoneType
                         # which means this follower is protected
                         if str(e).find('NoneType'):
-                            
                             followers_protected += 1                            
                             followers[k] = -1
                             followers_count -= 1
@@ -290,7 +289,6 @@ def insertFollowerFromFile(id_seguradora, followers, followers_count,\
             followers_count, followers_protected,\
                 followers_noTweets, followers_in, control)
     else:
-        
         m = json.dumps({'code':200, \
             'message': 'Finished!', \
             'users': {
