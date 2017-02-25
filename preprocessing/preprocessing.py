@@ -17,11 +17,11 @@ import re
 import sys
 import pandas as pd
 import numpy as np
-import timeit
+import logging
+import json
 
 # Internal imports
 sys.path.insert(0, '/home/r2d2/projeto_ext_vero/Engine/lib')
-
 import DatabaseMethods as dbm
 
 # For more term weighting go to:
@@ -46,8 +46,8 @@ def ClearTweet(arg):
     # Removes URLs: (http[s]?://(?:[a-z]|[0-9]|[$-_@.&+]|
     # [!*\(\),]|(?:%[0-9a-f][0-9a-f]))+
     # Ignores smiles: ([:=;][oO\-]?[D\)\]\(\]/\\OpP])
-    arg = re.sub('(<[^>]+>)|(@[\w]+)|(\#+[\w_]+[\w\'_\-]*[\w_]+)|(\d+)|(http[s]?
-    ://(?:[a-z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+)|([:=;][oO\-]?
+    arg = re.sub('(<[^>]+>)|(@[\w]+)|(\#+[\w_]+[\w\'_\-]*[\w_]+)|(\d+)|(http[s]?\
+    ://(?:[a-z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+)|([:=;][oO\-]?\
     [D\)\]\(\]/\\OpP])|(h[t]+)', '', arg, flags = re.M)
     return arg
 
@@ -95,8 +95,12 @@ time_begin = time.asctime(time.localtime(time.time()))
 # and the values are the followers
 U = dbm.GetUniverse()
 
+# Creates log file
+logging.basicConfig(filename = 'preprocessing_results.log', \
+    level = logging.DEBUG)
+
 for insurance_id in U.keys():
-    print "insurance_id: %s" % dbm.GetAccountLabel(insurance_id)
+    print "insurance_id: %s" % dbm.GetAccountLabel(insurance_id)    
     
     # >followers_feed< is a dict data type where keys are followers
     # and values are tweet ids from these followers
@@ -104,8 +108,6 @@ for insurance_id in U.keys():
     
     # Removes followers with no tweets inserted
     follower_feed = dict((k, v) for k, v in follower_feed.iteritems() if v)
-    
-    errfd = open("ERR.txt", "w")
 
     # Dict used to create the .csv file
     # Keys are tweet ids and values are the whole 
@@ -119,7 +121,7 @@ for insurance_id in U.keys():
     # and w ε >possible_roots<. i.e. {'work', ['worked', 'working']}
     R = dict()
     
-    for i, follower in enumerate(follower_feed.keys()):
+    for i, follower in enumerate(follower_feed.keys()[:5]):
         # >t1< is a dict where keys are tweet ids and values are 
         # tokenized tweet contents
         t1 = dict()
@@ -133,7 +135,7 @@ for insurance_id in U.keys():
         t3 = dict()
         
         # 1. Tokenize tweets
-        print "\Insurance-company %s" % dbm.GetAccountLabel(follower)
+        print "Follower %s" % dbm.GetAccountLabel(follower)
         print "\t\tTokenizing..."
         try:
             # Tokenized tweets set
@@ -142,7 +144,9 @@ for insurance_id in U.keys():
                     str(follower_feed[follower][tweet].encode(\
                     encoding='UTF-8', errors='strict'))))
         except(KeyError):
-            ?
+            logging.warning(json.dumps({'error': 'KeyError', \
+                'place_at': 'tokenizing'}), \
+                    time.asctime(time.localtime(time.time())))
             break
         
         # 2. Removes stop-words
@@ -151,7 +155,9 @@ for insurance_id in U.keys():
             for tweetId, tweet in t1.iteritems():
                 t2[tweetId] = list(set(tweet) - set(stop_words))
         except(KeyError):
-            ?
+            logging.warning(json.dumps({'error': 'KeyError', \
+                'place_at': 'removing stopwords'}), \
+                    time.asctime(time.localtime(time.time())))
             break
         
         # 2.1. Fills set with tweets
@@ -165,7 +171,9 @@ for insurance_id in U.keys():
             for tweetId, tweet in t2.iteritems():
                 t3[tweetId] = [stem(word) for word in tweet]
         except(KeyError):
-            ?
+            logging.warning(json.dumps({'error': 'KeyError', \
+                'place_at': 'stemmizing'}), \
+                    time.asctime(time.localtime(time.time())))
             break
         
         
@@ -202,7 +210,9 @@ for insurance_id in U.keys():
             print "\t%d of %d"\
                 % (i+1, len(follower_feed.keys()))
         except(KeyError):
-            ?
+            logging.warning(json.dumps({'error': 'KeyError', \
+                'place_at': 'creating R pair set '}), \
+                    time.asctime(time.localtime(time.time())))
             break
         
         # Starts inserting in database
