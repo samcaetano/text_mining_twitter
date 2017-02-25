@@ -1,4 +1,10 @@
 #!/usr/bin/python
+
+# This script was developed by Samuel Caetano
+# Data miner script. 
+# Using Twitter API, and OAuth 2.0 authentication, retrieves all available
+# followers from a given account and inserts it properly into the database
+
 # External imports
 import sqlite3 as sql
 import twitter
@@ -104,7 +110,7 @@ def get_user(arg):
             print m
             logging.info(m)
 
-# Searches for the account of a given user
+# Procura pela conta de um usuario passado por parametro
 def search_user(arg):
     try:
         return OAuth.twitter_api.users.search(q=arg)
