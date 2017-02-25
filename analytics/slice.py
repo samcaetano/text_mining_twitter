@@ -1,102 +1,109 @@
 #!/usr/bin/python
 
+# This script was developed by Samuel Caetano
+# Dimentionality reduction script. 
+# This script works on reducing the dimensionality of the dataset. To generate 
+# the cuts it calculates the inferior and superior quartiles, and then ignores
+# all terms which frequency is below the superior quartile (quartile 3). Draws
+# some charts for further analysis
+
+# External imports
 import pandas as pd
 import numpy as np
 import sys
 
+# Internal imports
 sys.path.insert(0, '../lib')
 import DatabaseMethods as dbm
 
 
-def PlotDataFromFile(seguradoraId):
+def PlotDataFromFile(insurance_id):
     
     import matplotlib.pyplot as plt
     
-    seguradoraName = dbm.GetAccountLabel(seguradoraId)
+    insurance_label = dbm.GetAccountLabel(insurance_id)
     
-    # Le o dataframe
-    df = pd.read_csv('%s/%s.csv' % (seguradoraName, seguradoraName))
+    # Reads the dataframe
+    df = pd.read_csv('%s/%s.csv' % (insurance_label, insurance_label))
     
-    # Elimina colunas com NaNs
+    # Drops all NaNs columns
     df = df.dropna(axis = 'columns',\
         how = 'all')
 
-    
-    # Calcula a frequencia de aparicao das...
-    #...palavras nos documentos
-    words = []
-    words_freq = []
+    # Calculates the occurence frequencies of the term in the documents
+    terms = []
+    terms_freq = []
     for row in df.index:
         
-        occurencies = 0
+        occurences = 0
         
         for column in df.columns[1:]:
-            occurencies += df[column][row]
+            occurences += df[column][row]
         
-        words += [df['Unnamed: 0'][row],]
-        words_freq += [occurencies,]
+        terms += [df['Unnamed: 0'][row],]
+        terms_freq += [occurences,]
         
-    # Cria pares com as palavras e suas frequencias
-    zipped = zip(words, words_freq)
+    # Pairs term and it's frequencies
+    zipped = zip(terms, terms_freq)
     
-    # Ordena de modo decrescente as palavras de acordo...
-    #...com as frequencias
+    # Sorts decrescently terms with it's frequencies
     zipped_sorted = sorted(zipped, key = lambda t: t[1],\
         reverse = True)
     
-    # Array com os dados
+    # Data array
     data = np.array([_[1] for _ in zipped_sorted])
     data_labels = [_[0] for _ in zipped_sorted]
     
-    # Encontra os quartis e a mediana
+    # Finds the quartiles and median
     q1, medians, q3 = np.percentile(data, [25, 50, 75])
     
     print q1, medians, q3
     
-    # Desenha o grafico de barras palavras por ocorrencias
+    # Draws the bars chart. Term per occurence
     plt.figure(1)
     plt.bar(np.arange(len(data_labels)),\
             data,\
             align = 'center',\
             alpha = 0.5)
     
-    plt.xlabel('Palavras')
-    plt.ylabel('Ocorrencias')
-    plt.title('Ocorrencia das palavras nos documentos da seguradora %s'\
-        % seguradoraName)
-    plt.savefig('%s/%s_ocorrenciaPalavras.png'\
-        % (seguradoraName, seguradoraName))    
+    plt.xlabel('Terms')
+    plt.ylabel('Ocurences')
+    plt.title('Occurence of terms in documents of %s'\
+        % insurance_label)
+    plt.savefig('%s/%s_ocorrenceTerms.png'\
+        % (insurance_label, insurance_label))    
     plt.close()
     
     # Desenha o boxplot
+    # Draws the boxplot
     plt.figure(2)
-    plt.title('Boxplot da seguradora %s'\
-        % seguradoraName)
+    plt.title('Boxplot of %s'\
+        % insurance_label)
     bp = plt.boxplot(data)
     plt.savefig('%s/%s_boxplot.png'\
-        % (seguradoraName, seguradoraName))
+        % (insurance_label, insurance_label))
     plt.close()
     
-    # Desenha o violin PlotDataFromFile
+    # Draws the violin
     plt.figure(3)
-    plt.title('Densidade e ocorrencia dos termos nos documentos da seguradora %s'\
-        % seguradoraName)
-    plt.xlabel('Densidade')
-    plt.ylabel('Ocorrencias')
+    plt.title('Density and occurence of terms in docs from %s'\
+        % insurance_label)
+    plt.xlabel('Density')
+    plt.ylabel('Ocorrences')
     plt.violinplot(data,\
         showmeans = True,\
         showmedians = True,\
             showextrema = True)
     plt.savefig('%s/%s_violinplot.png'\
-        % (seguradoraName, seguradoraName))
+        % (insurance_label, insurance_label))
     
-    CutFile(q1, q3, zipped, df, seguradoraName)
+    CutFile(q1, q3, zipped, df, insurance_label)
     
     plt.close()
     
 def CutFile(quartile1, quartile3, data, df, label):
     
-    print 'cutting %s file' % label
+    print 'Cutting %s file' % label
     
     sequence_to_remove = []
     
@@ -120,21 +127,17 @@ def CutFile(quartile1, quartile3, data, df, label):
     df.to_csv('%s/%s_sliced.csv'\
         % (label, label))
     
-seguradoraIduradoras = dbm.GetAllSeguradoras()
+general_insurances = dbm.GetAllSeguradoras()
 
-for seguradoraId in seguradoraIduradoras:
-    
-    #quartile1 = 20#int(input("\t\tInforme o corte minino: "))
-    #quartile3 = 25#int(input("\t\tInforme o corte maximo: "))
+for insurance_id in general_insurances:
     try:
-        PlotDataFromFile(seguradoraId)
-        #cut_file(seguradoraId, quartile1, quartile3)
+        PlotDataFromFile(insurance_id)
     except(IOError):
         next
     except(KeyError), e:
         with open("ERR.txt", "w") as arq:
-            arq.write("\n[KeyError cortanto o arquivo]\n")
-        print "\t\tErro redimensionando os dados..."
+            arq.write("\n[KeyError slicing the file]\n")
+        print "\t\tError reducing dimensionality"
         print e
-    print "\t\tCorte gerado"
+    print "\t\tSlice done"
     
