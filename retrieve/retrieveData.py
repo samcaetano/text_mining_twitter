@@ -386,16 +386,10 @@ def insert(account, tweets, isSeguradora, account_seg):
     con.commit()
 
 def InsertInsuranceFollower(account, account_seg):
-    cursor = con.cursor()
-    cursor.execute('''SELECT (Seguradora_idSeguradora) FROM Seguradora_Usuario
-        WHERE Usuario_idUsuario = ?''', (account,))
-    for row in cursor.fetchall():
-        for id in row:
-            if(id != account_seg):
-                con.execute("""INSERT OR IGNORE INTO Seguradora_Usuario
-                (Seguradora_idSeguradora, Usuario_idUsuario) VALUES (?,?)""",\
-                (account_seg, account))
-                con.commit()
+    con.execute("""INSERT OR IGNORE INTO Seguradora_Usuario
+    (Seguradora_idSeguradora, Usuario_idUsuario) VALUES (?,?)""",\
+    (account_seg, account))
+    con.commit()
 
 def main():
     try:
@@ -415,7 +409,8 @@ def main():
     except twitter.api.TwitterHTTPError as e:
         if str(e).find('401'):
             m = json.dumps({'code': 401, \
-                'message': 'Unauthorized', 'account': user['id']})
+                'message': 'Unauthorized', 'account': user['id']}), \
+                    time.asctime(time.localtime(time.time()))
             print m
             
             # Outputs to log file
@@ -423,7 +418,8 @@ def main():
             
         elif str(e).find('429'):
             m = json.dumps({'code': 429, \
-                'message': 'Rate limit exceeded'})
+                'message': 'Rate limit exceeded'}), \
+                    time.asctime(time.localtime(time.time()))
             print m
             
             # Outputs to log file
@@ -432,7 +428,7 @@ def main():
         time.sleep(900)
         return user
 
-logging.basicConfig(filename = 'results.log', \
+logging.basicConfig(filename = 'retrieving_results.log', \
     level = logging.DEBUG)
 
 # Receives the data from the insurance-company
