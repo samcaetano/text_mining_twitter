@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # This script was developed by Samuel Caetano
-# This script works on generationg posprocessing analysis.
+# This script works on generating posprocessing analysis.
 # Important links: [https://joernhees.de/blog/2015/08/26/, 
 # scipy-hierarchical-clustering-and-dendrogram-tutorial/] and 
 # [http://brandonrose.org/clustering]
