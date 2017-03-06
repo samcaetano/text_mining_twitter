@@ -46,9 +46,9 @@ def ClearTweet(arg):
     # Removes URLs: (http[s]?://(?:[a-z]|[0-9]|[$-_@.&+]|
     # [!*\(\),]|(?:%[0-9a-f][0-9a-f]))+
     # Ignores smiles: ([:=;][oO\-]?[D\)\]\(\]/\\OpP])
-    arg = re.sub('(<[^>]+>)|(@[\w]+)|(\#+[\w_]+[\w\'_\-]*[\w_]+)|(\d+)|(http[s]?\
-    ://(?:[a-z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+)|([:=;][oO\-]?\
-    [D\)\]\(\]/\\OpP])|(h[t]+)', '', arg, flags = re.M)
+    arg = re.sub('''(<[^>]+>)|(@[\w]+)|(\#+[\w_]+[\w\'_\-]*[\w_]+)|(\d+)|\
+    (http[s]?://(?:[a-z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+)|\
+    ([:=;][oO\-]?[D\)\]\(\]/\\OpP])|(h[t]+)''', '', arg, flags = re.M)
     return arg
 
 # Tokenize words
@@ -107,7 +107,16 @@ for insurance_id in U.keys():
     follower_feed = dbm.GetFollowerTweets(U, insurance_id)
     
     # Removes followers with no tweets inserted
+    # Note: There are difference from tweets in Twitter and tweets in database;
+    # a user can have tweets in Twitter but none in database, because after
+    # removing whatever's necessary this tweet can have no content to be 
+    # inserted into the database
     follower_feed = dict((k, v) for k, v in follower_feed.iteritems() if v)
+    
+    m = json.dumps({'message': 'Working', \
+        'place_at': 'Created followers feed'}), \
+            time.asctime(time.localtime(time.time()))
+    logging.info(m)
 
     # Dict used to create the .csv file
     # Keys are tweet ids and values are the whole 
@@ -121,7 +130,7 @@ for insurance_id in U.keys():
     # and w ε >possible_roots<. i.e. {'work', ['worked', 'working']}
     R = dict()
     
-    for i, follower in enumerate(follower_feed.keys()[:5]):
+    for i, follower in enumerate(follower_feed.keys()):
         # >t1< is a dict where keys are tweet ids and values are 
         # tokenized tweet contents
         t1 = dict()
@@ -143,10 +152,16 @@ for insurance_id in U.keys():
                 t1[tweet] = tokenize(ClearTweet(\
                     str(follower_feed[follower][tweet].encode(\
                     encoding='UTF-8', errors='strict'))))
+                
+            m = json.dumps({'message': 'Working', \
+                'place_at': 'Tokenized tweets'}), \
+                    time.asctime(time.localtime(time.time()))
+            logging.info(m)
         except(KeyError):
-            logging.warning(json.dumps({'error': 'KeyError', \
-                'place_at': 'tokenizing'}), \
-                    time.asctime(time.localtime(time.time())))
+            m = json.dumps({'message': 'KeyError', \
+                'place_at': 'Tokenized tweets'}), \
+                    time.asctime(time.localtime(time.time()))
+            logging.warning(m)
             break
         
         # 2. Removes stop-words
@@ -154,26 +169,42 @@ for insurance_id in U.keys():
             print "\t\tRemoving stop-words ..."
             for tweetId, tweet in t1.iteritems():
                 t2[tweetId] = list(set(tweet) - set(stop_words))
+            
+            
+            m = json.dumps({'message': 'Working', \
+                'place_at': 'Removed stop-words'}), \
+                    time.asctime(time.localtime(time.time()))
+            logging.info(m)
+            
         except(KeyError):
-            logging.warning(json.dumps({'error': 'KeyError', \
-                'place_at': 'removing stopwords'}), \
-                    time.asctime(time.localtime(time.time())))
+            m = json.dumps({'message': 'KeyError', \
+                'place_at': 'Removed stop-words'}), \
+                    time.asctime(time.localtime(time.time()))
+            logging.warning(m)
             break
         
         # 2.1. Fills set with tweets
         # >possible_roots< is a possible root list where values are tokens from 
         # the stop-wordless-tokenized tweets
-        possible_roots = [word for k, tweet in t2.iteritems() for word in tweet]
+        possible_roots = [word \
+            for k, tweet in t2.iteritems() \
+                for word in tweet]
         
         # 2.2 Stemize tweets
         try:
-            print "\t\tStemizing..."
+            print "\t\tStemming..."
             for tweetId, tweet in t2.iteritems():
                 t3[tweetId] = [stem(word) for word in tweet]
+            
+            m = json.dumps({'message': 'Working', \
+                'place_at': 'Stemmed'}), \
+                    time.asctime(time.localtime(time.time()))
+            logging.info(m)
         except(KeyError):
-            logging.warning(json.dumps({'error': 'KeyError', \
-                'place_at': 'stemmizing'}), \
-                    time.asctime(time.localtime(time.time())))
+            m = json.dumps({'message': 'KeyError', \
+                'place_at': 'Stemmed'}), \
+                    time.asctime(time.localtime(time.time()))
+            logging.warning(m)
             break
         
         
@@ -182,6 +213,12 @@ for insurance_id in U.keys():
         for k, tweet in t3.iteritems():
             possible_roots = list(set(possible_roots) - set(tweet))
         possible_roots = list(set(possible_roots))
+        
+        m = json.dumps({'message': 'Working', \
+            'place_at': \
+                'Removed not stemmized terms in possible roots'}), \
+                time.asctime(time.localtime(time.time()))
+        logging.info(m)
         
         # 3.1 Converts tokens to their stems
         s = stem
@@ -192,7 +229,8 @@ for insurance_id in U.keys():
             R.update({_: [],})
         
         
-        basket_of_terms = list(set([_ for tweet in t2.values() for _ in tweet]))
+        basket_of_terms = list(\set(\
+            [_ for tweet in t2.values() for _ in tweet]))
         
         
         # 4. Fills pair set {r: [w1, w2, w3, ..., wK]} in R
@@ -209,10 +247,17 @@ for insurance_id in U.keys():
                     
             print "\t%d of %d"\
                 % (i+1, len(follower_feed.keys()))
+            
+            m = json.dumps({'message': 'Working', \
+                'place_at': 'Created R pair set'}), \
+                    time.asctime(time.localtime(time.time()))
+            logging.info(m)
+            
         except(KeyError):
-            logging.warning(json.dumps({'error': 'KeyError', \
-                'place_at': 'creating R pair set '}), \
-                    time.asctime(time.localtime(time.time())))
+            m = json.dumps({'message': 'KeyError', \
+                'place_at': 'Created R pair set'}), \
+                    time.asctime(time.localtime(time.time()))
+            logging.warning(m)
             break
         
         # Starts inserting in database
@@ -226,6 +271,8 @@ for insurance_id in U.keys():
                     
     # 5. Genarates the output file in document_idXtoken format
     # where document_id ε collection and token ε t2  
+    logging.info('Generating dataset file', \
+                time.asctime(time.localtime(time.time())))
     data = dict()
     
     for tweet in collection_of_tweets.values():
@@ -250,9 +297,12 @@ for insurance_id in U.keys():
     data_frame.to_csv('../analytics/%s/%s.csv' % (label, label),\
         index_label = ['',] + collection_of_tweets.keys())
     
-    print '\t%s insurance-company inserted!\n' % dbm.GetAccountLabel(insurance_id)
+    print '\t%s insurance-company inserted!\n' % \
+        dbm.GetAccountLabel(insurance_id)
 
 print '\nPreprocessing done!'
 print 'Collections inserted: %d' % len(U)
 print 'Started at ', time_begin
 print "Finished at ", time.asctime(time.localtime(time.time()))
+logging.info('Finished', \
+                time.asctime(time.localtime(time.time())))
