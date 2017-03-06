@@ -319,7 +319,6 @@ def GetLocations(seg):
         cursor.execute("""SELECT screen_name, place_name FROM Usuario
             WHERE place_name != '' AND idUsuario = ?""", (user[0],))
         seg_followers += cursor.fetchall()
-        print seg_followers
     return seg_followers
 
 def GetFollowerFromCombination(a, b):
