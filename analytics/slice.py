@@ -67,8 +67,8 @@ def PlotDataFromFile(insurance_id):
             alpha = 0.5)
     
     plt.xlabel('Terms')
-    plt.ylabel('Ocurences')
-    plt.title('Occurence of terms in documents of %s'\
+    plt.ylabel('Occurences')
+    plt.title('Occurrence of terms in documents of %s'\
         % insurance_label)
     plt.savefig('%s/%s_ocorrenceTerms.png'\
         % (insurance_label, insurance_label))    
@@ -86,10 +86,10 @@ def PlotDataFromFile(insurance_id):
     
     # Draws the violin
     plt.figure(3)
-    plt.title('Density and occurence of terms in docs from %s'\
+    plt.title('Density and occurrence of terms in docs from %s'\
         % insurance_label)
     plt.xlabel('Density')
-    plt.ylabel('Ocorrences')
+    plt.ylabel('Occurrences')
     plt.violinplot(data,\
         showmeans = True,\
         showmedians = True,\
