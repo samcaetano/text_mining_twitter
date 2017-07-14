@@ -7,9 +7,6 @@
 # scipy-hierarchical-clustering-and-dendrogram-tutorial/] and 
 # [http://brandonrose.org/clustering]
 
-# Alterar as analises intra-cluster para
-# titulo do cluster na base
-
 # External imports
 import numpy as np
 import os
@@ -75,35 +72,23 @@ def LoadFromDataFrame(seg):
     
     df = pd.read_csv('../analytics/%s/%s_sliced.csv' % (label, label))
     df = df.dropna(axis = 'columns', how = 'all')
-    #df = df.drop('Unnamed: 0', axis = 1)
     
     M = pd.DataFrame.as_matrix(df)
 
     terms = [term for term in M.T[0]]
-    #d0 =  [df['Unnamed: 0.1'][r] for r in df.index]
     
-    #d1 = [[c] for c in df.columns[1:]]
     doc_ids = [[c] for c in df.columns[1:]]
     
-    #outter_tmp = []
-    #tmp = [] 
-    #for c in df.columns[2:]:
-    #    tmp = []
-    #    for r in df.index:
-    #        tmp += [str(df[c][r]),]
-    #    outter_tmp += [tmp,]
-    #d2 = outter_tmp
-    #print d2
     scores = [row for row in M.T[2:]]
     
     del M
     del df
+    
     # The content returned is a list of three lists, the first list is a list
     # of terms, the second is a document id list and the third is a score list
     # (where which score list corresponds to the scores of terms in each 
     # document)
     return [terms, doc_ids, scores]
-    #return [d0, d1, d2]
 
 def Draw2DClusters(arg, seguradora): 
     # >arg< is the dissimilarity matrix
@@ -413,24 +398,24 @@ logging.basicConfig(filename = 'posprocessing_outputs.log',\
 
 seguradoras = dbm.GetAllSeguradoras()
 collection = dict()
-#followers_count = [(i, len(dbm.GetFollowerBySeg(_)))\
-#                    for i, _ in enumerate(seguradoras)]
-#foo = sorted(followers_count, key = lambda x:x[1], reverse = True)
+followers_count = [(i, len(dbm.GetFollowerBySeg(_)))\
+                    for i, _ in enumerate(seguradoras)]
+foo = sorted(followers_count, key = lambda x:x[1], reverse = True)
 
-#try:
-#    PrintVennDiagram(seguradoras[foo[0][0]], seguradoras[foo[1][0]],\
-#                    seguradoras[foo[2][0]])
-#except(IndexError):
-#    print 'Contas insuficientes para gerar diagrama de Venn'
+try:
+    PrintVennDiagram(seguradoras[foo[0][0]], seguradoras[foo[1][0]],\
+                    seguradoras[foo[2][0]])
+except(IndexError):
+    print 'Contas insuficientes para gerar diagrama de Venn'
 
 
 for seguradora in seguradoras:
     try:
         label = dbm.GetAccountLabel(seguradora)
         
-        #if os.path.isfile('../analytics/%s/%s_bubblechart.png' % (label, label)):
-        #    print '%s ja processada' % label
-        #    continue
+        if os.path.isfile('../analytics/%s/%s_bubblechart.png' % (label, label)):
+            print '%s ja processada' % label
+            continue
         
         print 'processando %s' % label
         
@@ -453,8 +438,7 @@ for seguradora in seguradoras:
 
         # Original data matrix
         M = np.array([lst for lst in data[2]])
-        #M = M.astype(np.float)
-        #
+        
         # Reports to logfile
         m = json.dumps({'message': 'Working',\
             'place_at': 'Original data matrix created'}),\
