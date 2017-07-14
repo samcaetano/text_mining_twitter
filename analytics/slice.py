@@ -146,13 +146,11 @@ def CutFile(q3, data, df, label):
             
     del M
     del df
-    #TESTE ^
     
     
 general_insurances = dbm.GetAllSeguradoras()
 
 for insurance_id in general_insurances:
-    #insurance_id = 1202130601
     try:
         label = dbm.GetAccountLabel(insurance_id)
         if os.path.isfile('%s/%s_sliced.csv' % (label, label)):
