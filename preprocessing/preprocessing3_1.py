@@ -50,18 +50,6 @@ def ClearTweet(arg):
     arg = re.sub('(-|\\.|\\$|\\*|\\+|\\?|\\!|\\{|\\}|\\[|\\]|\\(|\\)|\\:)*', '', arg, flags = re.M)
     return arg
 
-    
-    # Removes HTML: ('<[^>]+>)
-    # Removes mentions: ('@[\w]+)
-    # Removes hashtags: ('\#+[\w_]+[\w\'_\-]*[\w_]+)
-    # Removes numbers: ('\d+','', arg, flags = re.M)
-    # Removes URLs: (http[s]?://(?:[a-z]|[0-9]|[$-_@.&+]|
-    # [!*\(\),]|(?:%[0-9a-f][0-9a-f]))+
-    # Ignores smiles: ([:=;][oO\-]?[D\)\]\(\]/\\OpP])
-    #arg = re.sub('(<[^>]+>)|(@[\w]+)|(\#+[\w_]+[\w\'_\-]*[\w_]+)|(\d+)|'+
-    #'(http[s]?://(?:[a-z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+)|'+
-    #'([:=;][oO\-]?[D\)\]\(\]/\\OpP])|(h[t]+)', '', arg, flags = re.M)
-
 # Tokenize words
 tokenize = lambda arg: tokens_re.findall(arg)
 
