@@ -14,6 +14,7 @@ sys.path.insert(0, '/home/r2d2/projeto_ext_vero/Engine/oauth')
 import OAuth
 
 con = sql.connect("../sql/TwitterA.db")
+#con = sql.connect("/run/media/r2d2/8GB/TwitterA.db")
 
 #
 def getFollower(arg):
@@ -48,8 +49,8 @@ def getTimeline(arg, count, repeat):
 def InsertFollowers(account):
     print "\tInserindo seguidores da %d" % account['id']    
 
-    # recebe os seguidores da seguradora corrente...
-    #...passada por parametro. Retorno incompleto
+    # Receives the followers from current insurance-company
+    # passed by parameter.
     followers = OAuth.twitter_api.followers.list(user_id = account['id'])
     for x in followers['users']:
         follower = getFollower(x['id'])
@@ -60,10 +61,8 @@ def InsertFollowers(account):
         except (twitter.api.TwitterHTTPError, NameError), e:
             next
         Insert(follower, follower_tweets, 0, account['id'])
-    print
 
 def Insert(account, tweets, isSeguradora, account_seg):
-    
     print "\tInserindo %d no banco de dados" % account['id']
     
     con.execute("""INSERT OR IGNORE INTO Usuario
@@ -74,7 +73,6 @@ def Insert(account, tweets, isSeguradora, account_seg):
                 isSeguradora, account['location']))
     
     for i in tweets:
-        
         con.execute("""INSERT OR IGNORE INTO Tweet
             (idTweet, Usuario_idUsuario,
             is_retweeted, tweet_text,
@@ -86,7 +84,6 @@ def Insert(account, tweets, isSeguradora, account_seg):
                             i['created_at']))
 
         for x in i['entities']['hashtags']:
-
             if hasattr(x, 'text'):
                 
                 con.execute("""INSERT OR IGNORE INTO Hashtag 
@@ -104,7 +101,6 @@ def Insert(account, tweets, isSeguradora, account_seg):
                         VALUES (?,?)""", (idHashtag, i['id']))
 
     if isSeguradora == 1:
-        #preenche tabelas Seguradora e Seguradora_Usuario
         con.execute("""INSERT OR IGNORE INTO Seguradora 
             (idSeguradora, followers_count, statuses_count) 
             VALUES (?,?,?)""",\
@@ -120,56 +116,30 @@ def Insert(account, tweets, isSeguradora, account_seg):
     con.commit()
     print "\t\tInsercao feita!"
 
-def InsertRoot(data, R, t2, segId): # 
-    # data eh followers[follower]
+def InsertRoot(data, R, t2, segId):
+    # >data< is >followers[follower]<
     print '\t\tInserindo raizes no bd...'
     
     for k, v in R.iteritems():
-        #
         aux = str(v).replace("""'""", "")
         aux2 = aux.replace('[', "")
         new_v = aux2.replace(']', "")
         
-        #print "Root_Derivative ", k, v, segId
         con.execute("""INSERT OR IGNORE INTO Root_Derivative
                 (root, derivative, Seguradora_idSeguradora)
                 VALUES (?, ?, ?)""", (str(k), str(new_v), segId))
-        #
         
         tweetId = 0
         for key, value in t2.iteritems():
-            #print "v, value", v, value
             if set(value).intersection(v):
                 tweetId = key
-                #print '\t\t FOUND', tweetId
                 
             if tweetId != 0:
                 con.execute("""INSERT OR IGNORE INTO Root_Score
                     (Root_idRoot, Tweet_idTweet, Seguradora_idSeguradora)
                     VALUES (?,?,?)""",\
-                        (k, tweetId, segId))
-                #print "Root_Score ", k, tweetId, segId
-        
+                        (k, tweetId, segId))        
     con.commit()
-    #i = 0
-    #for root in R:
-    #    for e in R[root]: # 'e' eh uma lista com as derivacoes da raiz 'root'
-    #        #print "Root_derivative > ", (root, str([i for i in e]), segId)
-    #        con.execute("""INSERT OR IGNORE INTO Root_Derivative
-    #            (root, derivative, Seguradora_idSeguradora)
-    #            VALUES (?, ?, ?)""", (root, str([_ for _ in e]), segId))
-    #    for i, t in enumerate(t2):
-    #        try:
-    #            for w in t:
-    #                if(NL.stem.snowball.SnowballStemmer("portuguese").stem(\
-    #                    NL.stem.snowball.SnowballStemmer("english").stem(\
-    #                        w.lower()).lower()) == root):
-    #                    con.execute("""INSERT OR IGNORE INTO Root_Score
-    #                        (Root_idRoot, Tweet_idTweet, Seguradora_idSeguradora)
-    #                        VALUES (?,?,?)""", (root, [index for index in data.keys()][i], segId))
-    #        except(IndexError, e):
-    #            next
-    #con.commit()
     
 def InsertPreprocessedTweets(arg):
     print '\t\tInserindo no banco de dados...'
@@ -178,13 +148,9 @@ def InsertPreprocessedTweets(arg):
     values = arg.values()
     
     for _ in zip(keys, values):
-        con.execute("""UPDATE OR IGNORE Tweet SET tweet_preprocessed=?
+        #print _[0], _[1]
+        con.execute("""UPDATE OR IGNORE Tweet SET tweet_preprocessed = ?
         WHERE idTweet LIKE ?""", (' '.join(_[1]), _[0]))
-    #for k, v in arg.iteritems():
-    #    con.execute("""UPDATE OR IGNORE Tweet SET tweet_preprocessed=?
-    #    WHERE idTweet LIKE ?""", (' '.join(v), k))
-    
-    
     con.commit()
     print '\t\tTerminado'
     
@@ -192,9 +158,12 @@ def GetUniverse():
     cursor = con.cursor()
     
     print "\t\tLendo banco de dados..."
-    universe = dict() # universe : conjunto universo de todas as seguradoras
+    
+    # >universe< is the whole insurance-companies set
+    universe = dict() 
     
     cursor.execute("""SELECT * FROM Seguradora_Usuario""")
+    
     for row in cursor.fetchall():
         if row[0] != row[1]:
             if row[0] in universe:
@@ -209,8 +178,9 @@ def GetFollowerTweets(U, seguradoraId):
     cursor = con.cursor()
 
     followers_collection = dict()
-    # Percorre cada seguidor da seguradora
-    for follower in U[seguradoraId]:
+    
+    # Loop through each insurance's follower. 50 followers at maximum
+    for follower in U[seguradoraId][:50]:
         tweets_per_follower = dict()
         
         cursor.execute("""SELECT idTweet, tweet_text FROM Tweet
@@ -218,8 +188,8 @@ def GetFollowerTweets(U, seguradoraId):
         
         for row in cursor.fetchall():
             tweets_per_follower.update({row[0]:row[1]})
-            
-        # Agrupa todos os tweets do seguidor corrente da seguradora
+
+        # Joins all follower's tweets from current insurance-company
         followers_collection.update({follower:tweets_per_follower})
         
     return followers_collection
@@ -274,7 +244,7 @@ def GetFollowerByAccount(arg, arg1):
     cursor.execute("""SELECT Usuario_idUsuario FROM Seguradora_Usuario
         WHERE Seguradora_idSeguradora = ?""", (arg1,))
     for row in cursor.fetchall():
-        userBySeguradora += [row[0],]
+        userBySeguradora.append(row[0])
     return list(set(userBySeguradora) & set(userByTweetId))
 
 def GetFollowerCount():
@@ -304,10 +274,11 @@ def GetTweetById(tweetId):
     cursor = con.cursor()
     cursor.execute("""SELECT tweet_preprocessed FROM Tweet
         WHERE idTweet = ?""", (tweetId,))
-    return cursor.fetchall()
+    for row in cursor.fetchall():
+        return row[0]
 
 def GetLocations(seg):
-    # Lista de seguidores da 
+    # >seg< followers list
     seg_followers = []
     
     cursor = con.cursor()
