@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 
 # This script was developed by Samuel Caetano
-# This script works on generating posprocessing analysis.
+# This script works on generationg posprocessing analysis.
 # Important links: [https://joernhees.de/blog/2015/08/26/, 
 # scipy-hierarchical-clustering-and-dendrogram-tutorial/] and 
 # [http://brandonrose.org/clustering]
+
+# Alterar as analises intra-cluster para
+# titulo do cluster na base
 
 # External imports
 import numpy as np
@@ -30,19 +33,16 @@ sys.path.insert(0, '../lib')
 import DatabaseMethods as dbm
 
 
-def RetriveContent(arg):
-    content_splited = []
-    for document_index, document_id in enumerate(arg[1]):
-        content = []
-        for position, score in enumerate(arg[2][document_index]):
-            if(float(score) > 0.):
-                content += [arg[0][position],]        
-        content_splited += [content,]
-    # The content returned is a list of three lists, the first list is a list
-    # of terms, the second is a document id list and the third is a score list
-    # (where which score list corresponds to the scores of terms in each 
-    # document)
-    return content_splited
+def RetriveContent(documents_id):
+    docs_content = []
+    for document_id in documents_id:
+        try:
+            tweet_preprocessed = dbm.GetTweetById(document_id[0])
+            docs_content += [tweet_preprocessed.split(' '),]
+        except(AttributeError):
+            next
+            
+    return docs_content
 
 def FancyDendrogram(*args, **kwargs):
     max_d = kwargs.pop('max_d', None)
@@ -73,80 +73,73 @@ def FancyDendrogram(*args, **kwargs):
 def LoadFromDataFrame(seg):
     label = dbm.GetAccountLabel(seg)
     
-    df = pd.read_csv('../analytics/%s/%s_sliced.csv' \
-        % (label, label))
-    df = df.dropna(axis = 'columns',\
-            how = 'all')
-    df = df.drop('Unnamed: 0', \
-        axis = 1)
+    df = pd.read_csv('../analytics/%s/%s_sliced.csv' % (label, label))
+    df = df.dropna(axis = 'columns', how = 'all')
+    #df = df.drop('Unnamed: 0', axis = 1)
+    
+    M = pd.DataFrame.as_matrix(df)
 
-    d0 =  [df['Unnamed: 0.1'][r] \
-        for r in df.index]    
+    terms = [term for term in M.T[0]]
+    #d0 =  [df['Unnamed: 0.1'][r] for r in df.index]
     
-    d1 = [[c] \
-        for c in df.columns[2:]]
+    #d1 = [[c] for c in df.columns[1:]]
+    doc_ids = [[c] for c in df.columns[1:]]
     
-    outter_tmp = []
-    tmp = []
+    #outter_tmp = []
+    #tmp = [] 
+    #for c in df.columns[2:]:
+    #    tmp = []
+    #    for r in df.index:
+    #        tmp += [str(df[c][r]),]
+    #    outter_tmp += [tmp,]
+    #d2 = outter_tmp
+    #print d2
+    scores = [row for row in M.T[2:]]
     
-    for c in df.columns[2:]:
-        tmp = []
-        for r in df.index:
-            tmp += [str(df[c][r]),]
-        outter_tmp += [tmp,]
-    d2 = outter_tmp
-    
-    return [d0, d1, d2]
+    del M
+    del df
+    # The content returned is a list of three lists, the first list is a list
+    # of terms, the second is a document id list and the third is a score list
+    # (where which score list corresponds to the scores of terms in each 
+    # document)
+    return [terms, doc_ids, scores]
+    #return [d0, d1, d2]
 
 def Draw2DClusters(arg, seguradora): 
     # >arg< is the dissimilarity matrix
-    mds = MDS(n_components = 2, \
-        dissimilarity='precomputed', \
-            random_state=1)
+    mds = MDS(n_components = 2,\
+              dissimilarity = 'precomputed',\
+              random_state = 1)
     pos = mds.fit_transform(arg)
 
     
-    plt.scatter(pos[:, 0], \
-        pos[:, 1], \
-            c = clusters)
-    plt.title('Documents and its clusters')
+    plt.scatter(pos[:, 0],\
+                pos[:, 1],\
+                c = clusters_colors)
+    
+    plt.title('Documentos and seus clusters')
 
     label = dbm.GetAccountLabel(seguradora)
-    plt.savefig('../analytics/%s/%s_partitional_cluster.png' \
-        % (label, label))
+    plt.savefig('../analytics/%s/%s_partitional_cluster.png' % (label, label))
     
     plt.close()
     
 def DrawDendrogram(arg, labels, seguradora):
     # Calculate full dendrogram
-    plt.title('Hierarchical clustering dendrogram')
-    plt.ylabel('Documents')
-    plt.xlabel('Dissimilarity')
+    plt.title('Dendrograma de clusterizacao hierarquica')
+    plt.ylabel('Documentos')
+    plt.xlabel('Dissimilaridade')
     dendrogram(
         arg,
-        leaf_rotation=0.,  # rotates the x axis labels
-        leaf_font_size=8.,  # font size for the x axis labels
+        leaf_rotation = 0.,  # rotates the x axis labels
+        leaf_font_size = 8.,  # font size for the x axis labels
         labels = [' '.join(e) for e in labels],
         orientation = 'left'
     )
     label = dbm.GetAccountLabel(seguradora)
-    plt.savefig('../analytics/%s/%s_hierarchical_cluster.png' \
-        % (label, label))
+    plt.savefig('../analytics/%s/%s_hierarchical_cluster.png' % (label, label))
+    
     plt.close()
-   
-# Not needed
-"""def DendrogramCut(Z, cut):
-    FancyDendrogram(
-        Z,
-        truncate_mode='lastp',
-        leaf_rotation=90.,
-        leaf_font_size=12.,
-        show_contracted=True,
-        annotate_above=10,
-        max_d=cut,  # plot a horizontal cut-off line
-    )
-    plt.savefig("hierarchical_cluster.png")
-    plt.close()"""
 
 def Silhouette(X, seguradora):
     maxx = len(X)
@@ -175,8 +168,8 @@ def Silhouette(X, seguradora):
         # Compute the silhouette scores for each sample
         sample_silhouette_values = silhouette_samples(X, cluster_labels)
 
-    plt.xlabel('Number of clusters')
-    plt.ylabel("Silhuette average")
+    plt.xlabel('Numero de clusters')
+    plt.ylabel("Silhuette media")
     plt.plot(clusters_silhouette.keys(), clusters_silhouette.values())
     
     insurance_label = dbm.GetAccountLabel(seguradora)
@@ -192,7 +185,7 @@ def Silhouette(X, seguradora):
         if max(silhouettes) == v:
             return k
         
-def DocumentIndexSorter(arg, data):
+def clusterSorter(arg, data):
     docs_organized_per_cluster = dict()
     
     for index, lst in enumerate(arg):
@@ -203,52 +196,49 @@ def DocumentIndexSorter(arg, data):
     
     return docs_organized_per_cluster
 
-def GetCommomTermsInCluster(docs_organized_per_cluster, docs):
+def GetCommomTermsInCluster(clusters, docs):
     A = dict()
     
-    for cluster in docs_organized_per_cluster:
+    for cluster in clusters:
         terms_per_cluster = Counter()
-        for index, docIndex in enumerate(docs_organized_per_cluster[cluster]):
-            terms_per_cluster.update(docs[docIndex])
+        
+        for doc_id in clusters[cluster]:
+            terms_per_cluster.update(docs[doc_id])
+        
         A.update({cluster:terms_per_cluster})
+    
     return A
 
 def RetrieveFollowers(argLst):
     return list(set([dbm.GetFollowerByTweetId(_) for _ in argLst]))
 
-def PrintInCluster(cluster, seg, totalFreq, collection,\
-    cluster_info, cluster_index):
+# This gives the information about what is in the cluster.
+# Which words are inside the cluster, what it can mean and who uses it
+def intraCluster(cluster, seg, collection, cluster_info,\
+                 cluster_index, documents_id):
 
     tweets = []
     
-    # Realizes the sorting of terms per quantity of occurences inside a cluster
-    items_sorted =  sorted([_ for _ in cluster.iteritems()], 
-                    key = lambda freq: freq[1],
-                    reverse = True)
+    # Realizes the sorting of terms by quantity of occurences inside a cluster
+    items_sorted =  sorted([_ for _ in cluster.iteritems()],\
+                                key = lambda freq: freq[1],\
+                                reverse = True)
     
     tweetsInCluster = []
     
-    # Percorre cada termo do cluster...
-    # ...que esta ordenado do maior para o menor.
     # Run through each cluster term which is sorted decrescently
     for item in items_sorted:
-        try:
-            # Proportion between quantity of occurences of term in general set
-            # over the quantity of occurences inside the cluster
-            weight = (float(item[1]) / float(totalFreq));
-            
+        try:            
             # List with all tweets which contains the term
-            tweets = dbm.GetTweetIdByTerm(item[0], seg)
+            tweets = [_ for _ in dbm.GetTweetIdByTerm(item[0], seg)
+                      if str(_) in documents_id]
             
             # List with the derivations of stemmed term
             variations = dbm.GetDerivatives(item[0])
             
-            # The w term appears x times in this cluster but appears in 
-            # y documents from the insurance-company which is not necessarily
-            # inside this cluster
-            print '''\t\t\t%s appears %d times inside this cluster.
-                \tThis term can be: %s''' % (item[0], item[1], variations)
-            print '\t\t\t\tThis word has a weight of %f ' % weight
+            # The w term appears x times in this cluster
+            print '''\t\t\t[%s] aparece %d vez(es) nesse cluster.
+                \t\tEsse termo pode ser: %s''' % (item[0], item[1], variations)
             
             if seg in collection.keys():
                 collection[seg] += [item[0],]
@@ -260,49 +250,67 @@ def PrintInCluster(cluster, seg, totalFreq, collection,\
             
         tweetsInCluster += tweets
 
-    lst = dbm.GetFollowerByAccount(list(set(tweetsInCluster)), seg)
-    print '\t\tThis cluster has %d followers from %s account' \
-        % (len(set(lst)-set([seg])), dbm.GetAccountLabel(seg))
-    print '\t\tThe follower(s) is/are ', list(set(lst)-set([seg]))
-    
-    cluster_info[cluster_index] += [len(set(lst)-set([seg])), \
-        dbm.GetDerivatives(items_sorted[0][0])]
+    followers = dbm.GetFollowerByAccount(list(set(tweetsInCluster)), seg)
+    followers = set(followers) - set([seg])
     
     
+    print '''\t\tExistem %d seguidores de %s que usam os termos nesse cluster.'''\
+        % (len(followers), dbm.GetAccountLabel(seg))
+        
+    print '\t\tEsses seguidores sao os seguintes ', list(followers)
     
+    get_der = dbm.GetDerivatives(items_sorted[0][0])
     
-def PrintBigCluster(generalCluster, seg, collection):
-    adder = []
+    possibilities = items_sorted[0][0] if get_der == None else get_der
+        
+    valid = True
+    for v in cluster_info.values():
+        if possibilities in v:
+            valid = False
+            
+            
+    if valid:
+        cluster_info[cluster_index] += [len(followers), possibilities]
+    else:
+        cluster_info.pop(cluster_index)
+
+def extraCluster(clusters, terms_clusterized, seg, collection, documents_id):
     # Creates structure in format:
     # {cluster_index: [frequency of terms in database, people in this cluster]}
-    cluster_info = dict()
+    cluster_info = dict()   
+
+    documents_id = [_[0] for _ in documents_id]
     
-    for clusterIndex, cluster in generalCluster.iteritems():
-        add = []
-        for term in cluster.keys():
-            add += dbm.GetTweetIdByTerm(term, seg)
-        adder += [(clusterIndex, len(add)),]
+    label = dbm.GetAccountLabel(seg)
     
-    # Print clusters
-    for _ in sorted(adder,\
-        key = lambda occurence:occurence[1],\
-        reverse = True):
-        if _[1] > 0:
-            # x :: numero de seguidores dentro do cluster 
-            # y :: numero de aparicoes das palavras do cluster...
-            #...que estao no banco de dados
-            # x is the number of followers inside the cluster
-            # y is the number of total occurences of the terms in the cluster
-            
-            print '\tThe cluster %d has term which appears in' \
-                % _[0],
-            print '%d cluster-independent tweets' \
-                % _[1]
-            print '\t\tThis cluster has the following terms'
-            cluster_info.update({_[0]:[_[1],]})
-            
-            PrintInCluster(generalCluster[_[0]], seg, _[1], collection, cluster_info, _[0])        
+    cluster_weightered = []
+    for k, v in clusters.iteritems():
+        cluster_weightered += [(k, len(v)),]
+    
+    # Lists the 25 biggest clusters (with more tweets inside)
+    for _ in sorted(cluster_weightered, key = lambda weight: weight[1],\
+        reverse = True)[:25]:
+        
+        print '\tO cluster %d tem %d tweet(s)' % (_[0], _[1])
+        print '''\t\tEsses tweet(s) tem %d termo(s), que sao os seguintes:'''\
+            % (len(terms_clusterized[_[0]].keys()))
+
+        cluster_info.update({_[0]:[_[1],]})
+        
+        intraCluster(terms_clusterized[_[0]], seg, collection, 
+                    cluster_info, _[0], documents_id)
+        
+        print 'cluster info ', cluster_info
+                
     PrintBubbleChart(seg, cluster_info)
+    ###
+    try:
+        import math
+        PrintTagCloud(seg,
+                    [v[2] for v in cluster_info.values()],
+                    [math.log10(v[0]*v[1]) for v in cluster_info.values()])
+    except(TypeError):
+        print 'algum erro em ', cluster_info.values()
     
 def PrintBubbleChart(seg, cluster_info):
     from pylab import *
@@ -318,64 +326,51 @@ def PrintBubbleChart(seg, cluster_info):
         # Number of people inside the cluster
         x.append(cluster_info[key][1])
         
-        # Number of times that the terms in cluster occurs in database
+        # Number of tweets in cluster occurs in database
         y.append(cluster_info[key][0])
         
         # Proporcional area to the number of people inside the cluster
         k = cluster_info[key][1]
-        if k >= 50:
-            k = 50 + cluster_info[key][1]*0.01
-        elif k <= 5:
-            k = 5 + cluster_info[key][1]*0.01
         area.append(math.pi * (k)**2)
         
         # Color corresponds to the number of occurences of terms in database
         color.append(cluster_info[key][1])
         
-        text(cluster_info[key][1],\
-                cluster_info[key][0],\
-                cluster_info[key][2],\
-                size = 7, horizontalalignment = 'center')
-    sct = scatter(x, \
-                    y, \
-                    c = color, \
-                    s = area, \
-                    linewidths = 2, \
-                    edgecolor = 'w')
+        text(cluster_info[key][1], cluster_info[key][0], cluster_info[key][2],
+             size = 7, horizontalalignment = 'center')
+        
+    sct = scatter(x, y, c = color, s = area, linewidths = 2, edgecolor = 'w')
     sct.set_alpha(1)
     
     label = dbm.GetAccountLabel(seg)
+    
     xmax = max([x[1] for x in cluster_info.values()])
     ymax = max([y[0] for y in cluster_info.values()])
-    axis([0, xmax+(1/float(xmax)),\
-        0, ymax+(1/float(ymax))])
+    
+    axis([0, xmax+(1/float(xmax)),
+          0, ymax+(1/float(ymax))])
+    
     title('%s' % label)
-    xlabel('Number of people inside the cluster')
+    xlabel('Numero de follower dentro do cluster')
     
     # This is the sum of occurrences in the database from all 
     # terms inside the cluster
-    ylabel('''Number of term occurrences in database''')
+    ylabel('''Numero de tweets dentro do cluster''')
     
     savefig('../analytics/%s/%s_bubblechart.png' % (label, label))
     close()
     
-def PrintTagCloud(seg):
+def PrintTagCloud(seg, terms, td_scores):
     from os import path
     from wordcloud import WordCloud
 
     d = path.dirname(__file__)
     
     # Tuple like follows (term, frequency)
-    terms_in_database = dbm.GetAllRoots(seg)
-    
     frequencies = []
-    for term in terms_in_database:
-        tag = str(term[0]).replace("'", "")
-        freq = len(dbm.GetTagOccurency(tag))
-        if  freq >= 20 and freq <= 25:
-            frequencies += [(dbm.GetDerivatives(tag), freq),]
-    
     # Gera a tag cloud da lista de tuplas das palavras e suas frequencias
+    for i in range(len(terms)):
+        frequencies += [(terms[i], td_scores[i]),]
     wordcloud = WordCloud().generate_from_frequencies(frequencies)
 
     import matplotlib.pyplot as plt
@@ -386,11 +381,8 @@ def PrintTagCloud(seg):
     label = dbm.GetAccountLabel(seg)
     wordcloud = WordCloud(max_font_size=40).generate_from_frequencies(frequencies)
     plt.title(label)
-    #plt.imshow(wordcloud)
-    #plt.axis("off")
     
-    plt.savefig('../analytics/%s/%s_tagcloud.png' \
-        % (label, label))
+    plt.savefig('../analytics/%s/%s_tagcloud.png' % (label, label))
     plt.close()
     
 def PrintVennDiagram(A, B, C):
@@ -398,63 +390,75 @@ def PrintVennDiagram(A, B, C):
     from matplotlib_venn import venn3
     
     # Given the insurance-company id. search it followers in database
-    setA, setB, setC = dbm.GetFollowerBySeg(A), \
-        dbm.GetFollowerBySeg(B), \
-            dbm.GetFollowerBySeg(C)
+    setA = dbm.GetFollowerBySeg(A)
+    setB = dbm.GetFollowerBySeg(B)
+    setC = dbm.GetFollowerBySeg(C)
     
-    labelA, labelB, labelC = dbm.GetAccountLabel(A), \
-        dbm.GetAccountLabel(B),\
-            dbm.GetAccountLabel(C)
+    labelA = dbm.GetAccountLabel(A)
+    labelB = dbm.GetAccountLabel(B)
+    labelC = dbm.GetAccountLabel(C)
     
-    set1, set2, set3 = set(setA), \
-        set(setB), \
-            set(setC)
+    set1 = set(setA)
+    set2 = set(setB)
+    set3 = set(setC)
 
     venn3([set1, set2, set3], (labelA, labelB, labelC))
-    plt.title('Venn diagram of the 3 biggest insurance-companies')
+    plt.title('Diagrama de Venn das 3 maiores seguradoras em numero de follower')
     plt.savefig('../analytics/venn_diagram.png')
     plt.close()
-    
-    
-    
+
 # Creates log file
-logging.basicConfig(filename = 'posprocessing_outputs.log', \
-    level = logging.DEBUG)
+logging.basicConfig(filename = 'posprocessing_outputs.log',\
+                    level = logging.DEBUG)
 
 seguradoras = dbm.GetAllSeguradoras()
 collection = dict()
-followers_count = [(i, len(dbm.GetFollowerBySeg(_))) for i, _ in enumerate(seguradoras)]
-foo = sorted(followers_count,\
-        key = lambda x:x[1],\
-        reverse = True)
+#followers_count = [(i, len(dbm.GetFollowerBySeg(_)))\
+#                    for i, _ in enumerate(seguradoras)]
+#foo = sorted(followers_count, key = lambda x:x[1], reverse = True)
 
-PrintVennDiagram(seguradoras[foo[0][0]], seguradoras[foo[1][0]], seguradoras[foo[2][0]])
+#try:
+#    PrintVennDiagram(seguradoras[foo[0][0]], seguradoras[foo[1][0]],\
+#                    seguradoras[foo[2][0]])
+#except(IndexError):
+#    print 'Contas insuficientes para gerar diagrama de Venn'
 
 
 for seguradora in seguradoras:
-    try: 
+    try:
         label = dbm.GetAccountLabel(seguradora)
-        print label
+        
+        #if os.path.isfile('../analytics/%s/%s_bubblechart.png' % (label, label)):
+        #    print '%s ja processada' % label
+        #    continue
+        
+        print 'processando %s' % label
+        
         
         data = LoadFromDataFrame(seguradora)
         
-        cr = RetriveContent(data)
+        cr = RetriveContent(data[1])
         
+        # >documents< is a dictionary where key is tweet id and value is
+        # tweet content
         documents = dict()
         for _, k in enumerate(data[1]):
-            documents.update({k[0]:cr[_]})
+            try:
+                documents.update({k[0]:cr[_]})
+            except(IndexError):
+                next
             
         docs_content = np.array([_ for _ in cr])
         
 
         # Original data matrix
         M = np.array([lst for lst in data[2]])
-        M = M.astype(np.float)
-        
+        #M = M.astype(np.float)
+        #
         # Reports to logfile
-        m = json.dumps({'message': 'Working', \
-            'place_at': 'Original data matrix created'}), \
-                time.asctime(time.localtime(time.time()))
+        m = json.dumps({'message': 'Working',\
+            'place_at': 'Original data matrix created'}),\
+            time.asctime(time.localtime(time.time()))
         logging.info(m)
 
         # Similarity and dissimilarity matrix
@@ -464,13 +468,12 @@ for seguradora in seguradoras:
         # Reports to logfile
         m = json.dumps({'message': 'Working', \
             'place_at': 'Similarity and dissimilarity matrix created'}), \
-                time.asctime(time.localtime(time.time()))
+            time.asctime(time.localtime(time.time()))
         logging.info(m)
 
     
         # Calculates silhouette
         k = Silhouette(M, seguradora)
-        
         # Reports to logfile
         m = json.dumps({'message': 'Working', \
             'place_at': 'Silhouette calculated'}), \
@@ -480,7 +483,7 @@ for seguradora in seguradoras:
         # Spherical clustering
         skm = SKMeans(n_clusters = k, random_state = 0) 
         skm.fit(M)
-        clusters = skm.labels_
+        clusters_colors = skm.labels_
         
         # Reports to logfile
         m = json.dumps({'message': 'Working', \
@@ -490,7 +493,10 @@ for seguradora in seguradoras:
 
         # Hierarchical clustering
         from scipy.spatial.distance import pdist
-        Z = linkage(pdist(M, 'cosine'), method = 'average')
+        dist = pdist(M, 'cosine')
+        dist =  dist[~np.isnan(dist)]
+        
+        Z = linkage(dist, method = 'average')
         
         # Reports to logfile
         m = json.dumps({'message': 'Working', \
@@ -500,33 +506,33 @@ for seguradora in seguradoras:
 
         # Dendrogram plot
         # Calculate cut in dendrogram
-        cutted = cut_tree(Z, height=0.75)
+        cutted = cut_tree(Z, height = 0.75)
         
-        docsIndex_sorted_to_clusters = DocumentIndexSorter(cutted, data)
+        # Creates the clusters, which is a dictionary where key is the cluster 
+        # index and value is a list of documents that belong to the cluster
+        clusters = clusterSorter(cutted, data)
         
-        print 'Processed account: %s' \
-            % dbm.GetAccountLabel(seguradora)
+        print 'Processed account: %s' % dbm.GetAccountLabel(seguradora)
+        print '\tO k ideal, por clusterizacao particional, eh %d' % k
+        print '\tO k ideal, por clusterizacao hierarquica, eh %d' \
+            % len(clusters.keys())
         
-        print '\tThe ideal k, by partitional clustering, is %d' % k
-        print '\tThe ideal k, by hierarchical clustering, is %d' \
-            % len(docsIndex_sorted_to_clusters.keys())
-
-        commom_terms_per_cluster = \
-            GetCommomTermsInCluster(docsIndex_sorted_to_clusters, documents)
+        commom_terms_per_cluster = GetCommomTermsInCluster(clusters, documents)        
         
-        
-        PrintBigCluster(commom_terms_per_cluster, seguradora, collection)
-        
-        # Draws tag-cloud
-        PrintTagCloud(seguradora)
-        
-        collection[seguradora] = commom_terms_per_cluster
-                    
         # Draws spherical cluster
         Draw2DClusters(dissimilarity, seguradora)
-    
+
         # Draws dendrogram
         DrawDendrogram(Z, docs_content, seguradora)
+        
+        extraCluster(clusters,
+                     commom_terms_per_cluster,
+                     seguradora,
+                     collection,
+                     data[1])
+        
+        
+        collection[seguradora] = commom_terms_per_cluster
         
         # Reports to logfile
         m = json.dumps({'message': 'Working', \
@@ -534,28 +540,36 @@ for seguradora in seguradoras:
                 time.asctime(time.localtime(time.time()))
         logging.info(m)
         
+        del M
+        del Z
+        
     except(IOError, ValueError), e:
         print e
         next
 
-print 'Analysis among insurance-companies'
-print '\t%d total users' % dbm.GetFollowerCount()
+print 'Analise entre seguradoras'
+print '\t%d seguidores totais' % dbm.GetFollowerCount()
 
 for k in collection.keys():
-    print "\t%d (%f) followers of %s"\
-        % (len(dbm.GetFollowerBySeg(k))-1,\
+    print "\t%d (%f) seguidores de %s"\
+        % (len(dbm.GetFollowerBySeg(k)) - 1,\
             (float(\
-                len(dbm.GetFollowerBySeg(k))-1)/float(\
+                len(dbm.GetFollowerBySeg(k)) - 1)/float(\
                     dbm.GetFollowerCount())),dbm.GetAccountLabel(k))
+
 import itertools
 combinations = itertools.combinations(collection.keys(), 2)
-print '\tCombinations '
+print '\tCombinacoes '
+
 for combination in combinations:
-    total_number = len(dbm.GetFollowerFromCombination(combination[0],\
-        combination[1]))
+    follower_from_comb = dbm.GetFollowerFromCombination(combination[0],
+                                                        combination[1])
+    total_number = len(follower_from_comb)
+    
     labelA = dbm.GetAccountLabel(combination[0])
     labelB = dbm.GetAccountLabel(combination[1])
-    print '\t%d (%f) followers of %s and %s' \
+    
+    print '\t%d (%f) seguidores de %s e %s' \
         % (total_number,\
-            float(float(total_number)/float(dbm.GetFollowerCount())),\
-                labelA,labelB)
+           float(float(total_number) / float(dbm.GetFollowerCount())),\
+       labelA, labelB)
