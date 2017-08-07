@@ -24,6 +24,8 @@ from collections import Counter
 import json
 import logging
 import time
+import matplotlib
+matplotlib.rcParams.update({'font.size': 24})
 
 # Internal imports
 sys.path.insert(0, '../lib')
@@ -50,9 +52,9 @@ def FancyDendrogram(*args, **kwargs):
     ddata = dendrogram(*args, **kwargs)
 
     if not kwargs.get('no_plot', False):
-        plt.title('Hierarchical Clustering Dendrogram (truncated)')
-        plt.xlabel('sample index or (cluster size)')
-        plt.ylabel('distance')
+        plt.title('Dendrograma Clusterização Hierarquica (truncado)')
+        plt.xlabel('sample index or (cluster size)', fontsize=16)
+        plt.ylabel('distance', fontsize=16)
         for i, d, c in zip(ddata['icoord'], \
                             ddata['dcoord'], \
                             ddata['color_list']):
@@ -72,23 +74,26 @@ def LoadFromDataFrame(seg):
     
     df = pd.read_csv('../analytics/%s/%s_sliced.csv' % (label, label))
     df = df.dropna(axis = 'columns', how = 'all')
+    #df = df.drop('Unnamed: 0', axis = 1)
     
     M = pd.DataFrame.as_matrix(df)
 
     terms = [term for term in M.T[0]]
+    #d0 =  [df['Unnamed: 0.1'][r] for r in df.index]
     
+    #d1 = [[c] for c in df.columns[1:]]
     doc_ids = [[c] for c in df.columns[1:]]
-    
+   
     scores = [row for row in M.T[2:]]
     
     del M
     del df
-    
     # The content returned is a list of three lists, the first list is a list
     # of terms, the second is a document id list and the third is a score list
     # (where which score list corresponds to the scores of terms in each 
     # document)
     return [terms, doc_ids, scores]
+    #return [d0, d1, d2]
 
 def Draw2DClusters(arg, seguradora): 
     # >arg< is the dissimilarity matrix
@@ -102,18 +107,19 @@ def Draw2DClusters(arg, seguradora):
                 pos[:, 1],\
                 c = clusters_colors)
     
-    plt.title('Documentos and seus clusters')
+    plt.title('Documentos e seus clusters')
 
     label = dbm.GetAccountLabel(seguradora)
     plt.savefig('../analytics/%s/%s_partitional_cluster.png' % (label, label))
-    
     plt.close()
     
 def DrawDendrogram(arg, labels, seguradora):
     # Calculate full dendrogram
-    plt.title('Dendrograma de clusterizacao hierarquica')
-    plt.ylabel('Documentos')
-    plt.xlabel('Dissimilaridade')
+    label = dbm.GetAccountLabel(seguradora)
+    
+    plt.title('Dendrograma de %s', label)
+    plt.ylabel('Documentos', fontsize=16)
+    plt.xlabel('Dissimilaridade', fontsize=16)
     dendrogram(
         arg,
         leaf_rotation = 0.,  # rotates the x axis labels
@@ -121,12 +127,12 @@ def DrawDendrogram(arg, labels, seguradora):
         labels = [' '.join(e) for e in labels],
         orientation = 'left'
     )
-    label = dbm.GetAccountLabel(seguradora)
-    plt.savefig('../analytics/%s/%s_hierarchical_cluster.png' % (label, label))
     
+    plt.savefig('../analytics/%s/%s_hierarchical_cluster.png' % (label, label))    
     plt.close()
 
 def Silhouette(X, seguradora):
+    insurance_label = dbm.GetAccountLabel(seguradora)
     maxx = len(X)
     
     if maxx > 11:
@@ -153,11 +159,10 @@ def Silhouette(X, seguradora):
         # Compute the silhouette scores for each sample
         sample_silhouette_values = silhouette_samples(X, cluster_labels)
 
-    plt.xlabel('Numero de clusters')
-    plt.ylabel("Silhuette media")
+    plt.title('Silhueta media de %s' % insurance_label)
+    plt.xlabel('Numero de clusters', fontsize=16)
+    plt.ylabel("Silhueta media", fontsize=16)
     plt.plot(clusters_silhouette.keys(), clusters_silhouette.values())
-    
-    insurance_label = dbm.GetAccountLabel(seguradora)
     plt.savefig("../analytics/%s/%s_silhuette.png" \
         % (insurance_label, insurance_label))
     plt.close()
@@ -252,8 +257,7 @@ def intraCluster(cluster, seg, collection, cluster_info,\
     for v in cluster_info.values():
         if possibilities in v:
             valid = False
-            
-            
+
     if valid:
         cluster_info[cluster_index] += [len(followers), possibilities]
     else:
@@ -336,11 +340,11 @@ def PrintBubbleChart(seg, cluster_info):
           0, ymax+(1/float(ymax))])
     
     title('%s' % label)
-    xlabel('Numero de follower dentro do cluster')
+    xlabel('Numero de follower dentro do cluster', fontsize=16)
     
     # This is the sum of occurrences in the database from all 
     # terms inside the cluster
-    ylabel('''Numero de tweets dentro do cluster''')
+    ylabel('''Numero de tweets dentro do cluster''', fontsize=16)
     
     savefig('../analytics/%s/%s_bubblechart.png' % (label, label))
     close()
@@ -398,6 +402,7 @@ logging.basicConfig(filename = 'posprocessing_outputs.log',\
 
 seguradoras = dbm.GetAllSeguradoras()
 collection = dict()
+
 followers_count = [(i, len(dbm.GetFollowerBySeg(_)))\
                     for i, _ in enumerate(seguradoras)]
 foo = sorted(followers_count, key = lambda x:x[1], reverse = True)
@@ -413,9 +418,9 @@ for seguradora in seguradoras:
     try:
         label = dbm.GetAccountLabel(seguradora)
         
-        if os.path.isfile('../analytics/%s/%s_bubblechart.png' % (label, label)):
-            print '%s ja processada' % label
-            continue
+        #if os.path.isfile('../analytics/%s/%s_bubblechart.png' % (label, label)):
+        #    print '%s ja processada' % label
+        #    continue
         
         print 'processando %s' % label
         
@@ -438,7 +443,8 @@ for seguradora in seguradoras:
 
         # Original data matrix
         M = np.array([lst for lst in data[2]])
-        
+        #M = M.astype(np.float)
+        #
         # Reports to logfile
         m = json.dumps({'message': 'Working',\
             'place_at': 'Original data matrix created'}),\
@@ -463,7 +469,7 @@ for seguradora in seguradoras:
             'place_at': 'Silhouette calculated'}), \
                 time.asctime(time.localtime(time.time()))
         logging.info(m)
-        
+        continue
         # Spherical clustering
         skm = SKMeans(n_clusters = k, random_state = 0) 
         skm.fit(M)
