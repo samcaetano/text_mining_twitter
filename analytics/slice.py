@@ -20,7 +20,10 @@ import DatabaseMethods as dbm
 def PlotDataFromFile(insurance_id):
     
     import matplotlib.pyplot as plt
-    
+    #
+    import matplotlib
+    matplotlib.rcParams.update({'font.size': 24})
+    #
     insurance_label = dbm.GetAccountLabel(insurance_id)
     
     # Reads the dataframe
@@ -66,30 +69,28 @@ def PlotDataFromFile(insurance_id):
             align = 'center',
             alpha = 0.5)
     
-    plt.xlabel('Terms')
-    plt.ylabel('Occurences')
-    plt.title('Occurrence of terms in documents of %s'
-              % insurance_label)
-    plt.savefig('%s/%s_ocorrenceTerms.png'\
-        % (insurance_label, insurance_label))    
+    plt.xlabel('Termos', fontsize=16)
+    plt.ylabel('Ocorrencias', fontsize=16)
+    plt.title('Documentos de %s' % insurance_label)
+    plt.savefig('%s/%s_ocorrenceTerms.png' % (insurance_label, insurance_label))
     plt.close()
     
     # Desenha o boxplot
-    # Draws the boxplot
     plt.figure(2)
-    plt.title('Boxplot of %s'
+    plt.title('Boxplot de %s'
               % insurance_label)
     bp = plt.boxplot(data)
     plt.savefig('%s/%s_boxplot.png'\
         % (insurance_label, insurance_label))
+    plt.ylabel('Ocorrencias', fontsize=16)
     plt.close()
     
     # Draws the violin
     plt.figure(3)
-    plt.title('Density and occurrence of terms in docs from %s'
+    plt.title('Termos de %s'
               % insurance_label)
-    plt.xlabel('Density')
-    plt.ylabel('Occurrences')
+    plt.xlabel('Densidade', fontsize=16)
+    plt.ylabel('Ocorrencias', fontsize=16)
     plt.violinplot(data, 
                    showmeans = False,
                    showmedians = True)
@@ -132,22 +133,7 @@ def CutFile(q3, data, df, label):
     
     df.to_csv('%s/%s_sliced.csv' % (label, label))  
     del df
-    
-    # TESTE v
-    df = pd.read_csv('%s/%s_sliced.csv' % (label, label))
-    M = pd.DataFrame.as_matrix(df)
-    print M
-    for i, column in enumerate(M.T):
-        try:
-            if sum(list(column)) == 0:
-                print 'erro'
-        except(TypeError):
-            next
-            
-    del M
-    del df
-    
-    
+
 general_insurances = dbm.GetAllSeguradoras()
 
 for insurance_id in general_insurances:
